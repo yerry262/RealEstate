@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: deal-finder-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dealfinder
+      POSTGRES_PASSWORD: dealfinder123
+      POSTGRES_DB: deal_finder
+    ports:
+      - "5432:5432"
+    volumes:
+      # Persist data locally
+      - ./db-data:/var/lib/postgresql/data
+      # Run init scripts on first start
+      - ./backend/init-db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dealfinder -d deal_finder"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Optional: pgAdmin for database management UI
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: deal-finder-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@dealfinder.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    volumes:
+      - ./pgadmin-data:/var/lib/pgadmin
