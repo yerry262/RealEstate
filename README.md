@@ -1,4 +1,4 @@
-# Deal Finder - Real Estate Investment Map
+# Deal Finder - Real Estate Investment Heat Map
 
 An interactive React application for visualizing and analyzing real estate investment opportunities. Features satellite maps with heatmap overlays showing deal quality metrics, and a powerful property calculator for instant investment analysis.
 
