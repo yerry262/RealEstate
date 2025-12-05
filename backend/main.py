@@ -48,6 +48,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ============ HEALTH CHECK ============
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Railway"""
+    return {"status": "healthy", "service": "deal-finder-api"}
+
 # ============ MODELS ============
 
 class PropertyBase(BaseModel):

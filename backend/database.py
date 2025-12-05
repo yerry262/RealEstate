@@ -49,10 +49,11 @@ async def get_connection() -> AsyncGenerator[asyncpg.Connection, None]:
 
 async def fetch_properties_in_bbox(north: float, south: float, east: float, west: float, filters: dict = None):
     """
-    Fetch properties within a bounding box using PostGIS
+    Fetch properties within a bounding box using simple lat/lng comparison
+    Works with or without PostGIS
     """
     async with get_connection() as conn:
-        # Build query with filters
+        # Build query with filters - use simple lat/lng instead of PostGIS
         query = """
             SELECT 
                 id, address, street, city, state, zip,
@@ -64,9 +65,10 @@ async def fetch_properties_in_bbox(north: float, south: float, east: float, west
                 number_of_units, last_sold_date, last_sold_amount,
                 estimated_monthly_rent
             FROM properties
-            WHERE location && ST_MakeEnvelope($1, $2, $3, $4, 4326)
+            WHERE latitude BETWEEN $1 AND $2
+              AND longitude BETWEEN $3 AND $4
         """
-        params = [west, south, east, north]
+        params = [south, north, west, east]
         param_idx = 5
         
         # Apply filters
