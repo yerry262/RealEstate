@@ -4,6 +4,7 @@ An interactive React application for visualizing and analyzing real estate inves
 
 ![Deal Finder Screenshot](docs/screenshot.png)
 
+
 ## Features
 
 ### 🗺️ Interactive Map
