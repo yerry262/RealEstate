@@ -1,0 +1,73 @@
+name: Ultracode
+
+# Dynamic, agentic Claude Code workflow.
+#
+# Two ways to run it:
+#   1. Mention @ultracode in an issue, issue comment, PR comment, or PR review.
+#   2. Trigger it manually (Actions tab -> Ultracode -> Run workflow) and type a
+#      free-form task. This is the "dynamic" path: whatever you ask for, Ultracode
+#      plans it and fans the work out to the specialized subagents defined in
+#      .claude/agents/ (frontend, backend, reviewer, explorer).
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  pull_request_review:
+    types: [submitted]
+  issues:
+    types: [opened, assigned, labeled]
+  workflow_dispatch:
+    inputs:
+      task:
+        description: "Free-form task for Ultracode (it will decompose and delegate to subagents)"
+        required: true
+        type: string
+      branch:
+        description: "Base branch to work from"
+        required: false
+        default: "master"
+        type: string
+
+# Don't pile up concurrent runs on the same issue/PR; let an in-flight run finish.
+concurrency:
+  group: ultracode-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+  actions: read
+
+jobs:
+  ultracode:
+    # Run on a manual dispatch, or when "@ultracode" appears in the triggering text.
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@ultracode')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@ultracode')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@ultracode')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@ultracode') || contains(github.event.issue.title, '@ultracode')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Full history so the agent can branch, diff, and rebase cleanly.
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.branch || '' }}
+
+      - name: Run Ultracode (Claude Code)
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          trigger_phrase: "@ultracode"
+          # On a manual dispatch, feed the typed task as the direct prompt.
+          # On issue/PR events this stays empty and Claude reads the triggering text.
+          prompt: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.task || '' }}
+          # Give the agent room to plan and delegate to subagents.
+          claude_args: "--max-turns 40"
