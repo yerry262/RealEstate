@@ -102,7 +102,7 @@ export function calculateMonthlyExpenses({
  * @returns {number} Estimated monthly rent
  */
 export function estimateRent(property) {
-  const { sqft, beds, baths, yearBuilt, city } = property;
+  const { sqft, beds, baths, yearBuilt } = property;
   
   // Base rent per sqft (varies by market - this is simplified)
   let baseRentPerSqft = 1.2;

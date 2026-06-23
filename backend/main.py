@@ -39,11 +39,20 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS middleware for React frontend
+# CORS middleware for React frontend.
+# Origins are configurable via the ALLOWED_ORIGINS env var (comma-separated).
+# Defaults to "*" so the deployed GitHub Pages frontend keeps working out of the
+# box. Note: a wildcard origin is invalid together with allow_credentials=True
+# (browsers reject it), and this API uses no cookies/auth, so credentials are
+# disabled rather than silently broken.
+ALLOWED_ORIGINS = [
+    o.strip() for o in os.getenv("ALLOWED_ORIGINS", "*").split(",") if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "*"],
-    allow_credentials=True,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -165,7 +174,7 @@ def estimate_rent(sqft: int, beds: int, baths: float, year_built: int) -> float:
     """Estimate monthly rent based on property characteristics"""
     base_rent_per_sqft = 1.2
     
-    age = 2024 - year_built
+    age = date.today().year - year_built
     if age < 10:
         base_rent_per_sqft *= 1.15
     elif age < 30:
@@ -235,7 +244,9 @@ def analyze_property(property: Property, assumptions: AnalysisAssumptions) -> De
     # Calculate returns
     cap_rate = annual_noi / price if price > 0 else 0
     cash_on_cash = annual_cash_flow / total_cash_invested if total_cash_invested > 0 else 0
-    dscr = annual_noi / (monthly_mortgage * 12) if monthly_mortgage > 0 else float('inf')
+    # When there's no mortgage, DSCR is effectively infinite. Use a large finite
+    # sentinel instead of float('inf'), which serializes to invalid JSON.
+    dscr = annual_noi / (monthly_mortgage * 12) if monthly_mortgage > 0 else 999.0
     
     # Break-even occupancy
     break_even_occupancy = (total_monthly_expenses + monthly_mortgage) / monthly_rent if monthly_rent > 0 else 1
@@ -306,10 +317,6 @@ def analyze_property(property: Property, assumptions: AnalysisAssumptions) -> De
 async def root():
     return {"message": "Deal Finder API", "version": "1.0.0"}
 
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy"}
-
 @app.post("/api/analyze", response_model=DealAnalysis)
 async def analyze_deal(property: PropertyCreate, assumptions: Optional[AnalysisAssumptions] = None):
     """
@@ -340,8 +347,9 @@ async def get_properties(
     Uses PostGIS for spatial queries.
     """
     try:
-        # If bounding box provided, use spatial query
-        if all([north, south, east, west]):
+        # If a full bounding box is provided, use the spatial query. Check for
+        # None explicitly so a legitimate 0.0 coordinate isn't treated as missing.
+        if all(v is not None for v in (north, south, east, west)):
             filters = {
                 'status': status,
                 'home_type': home_type,
@@ -354,38 +362,43 @@ async def get_properties(
             # Return all properties
             properties = await fetch_all_properties()
         
-        # Calculate analysis for each property
-        results = []
-        for prop in properties:
-            # Add analysis data
-            analysis = calculate_property_analysis(prop)
-            prop['analysis'] = analysis
-            
-            # Rename fields for frontend compatibility
-            prop['sqft'] = prop.pop('square_foot', 0)
-            prop['beds'] = prop.pop('bed', 0)
-            prop['baths'] = prop.pop('bath', 0)
-            prop['pricePerSqft'] = prop.pop('price_per_square_foot', 0)
-            prop['lotSize'] = prop.pop('lot_size', 0)
-            prop['homeType'] = prop.pop('home_type', '')
-            prop['homeDesign'] = prop.pop('home_design', '')
-            prop['estimatedTaxes'] = prop.pop('estimated_taxes', 0)
-            prop['yearBuilt'] = prop.pop('year_built', 0)
-            prop['units'] = prop.pop('number_of_units', 1)
-            prop['dateListed'] = prop.pop('date_listed', None)
-            prop['daysOnMarket'] = prop.pop('days_on_market', 0)
-            prop['forSale'] = prop.pop('for_sale', True)
-            prop['lastSoldDate'] = prop.pop('last_sold_date', None)
-            prop['lastSoldAmount'] = prop.pop('last_sold_amount', 0)
-            prop['estimatedMonthlyRent'] = prop.pop('estimated_monthly_rent', 0)
-            
-            results.append(prop)
-        
+        # Attach analysis and convert DB field names to the frontend's shape.
+        results = [to_frontend_property(prop) for prop in properties]
         return results
-        
+
     except Exception as e:
         print(f"Database error: {e}")
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+# Maps snake_case DB column names to the camelCase keys the frontend expects.
+# (db_key, frontend_key, default)
+_FIELD_RENAMES = [
+    ('square_foot', 'sqft', 0),
+    ('bed', 'beds', 0),
+    ('bath', 'baths', 0),
+    ('price_per_square_foot', 'pricePerSqft', 0),
+    ('lot_size', 'lotSize', 0),
+    ('home_type', 'homeType', ''),
+    ('home_design', 'homeDesign', ''),
+    ('estimated_taxes', 'estimatedTaxes', 0),
+    ('year_built', 'yearBuilt', 0),
+    ('number_of_units', 'units', 1),
+    ('date_listed', 'dateListed', None),
+    ('days_on_market', 'daysOnMarket', 0),
+    ('for_sale', 'forSale', True),
+    ('last_sold_date', 'lastSoldDate', None),
+    ('last_sold_amount', 'lastSoldAmount', 0),
+    ('estimated_monthly_rent', 'estimatedMonthlyRent', 0),
+]
+
+
+def to_frontend_property(prop: dict) -> dict:
+    """Attach investment analysis and rename DB fields to the frontend shape."""
+    prop['analysis'] = calculate_property_analysis(prop)
+    for db_key, frontend_key, default in _FIELD_RENAMES:
+        prop[frontend_key] = prop.pop(db_key, default)
+    return prop
 
 
 def calculate_property_analysis(prop: dict) -> dict:
@@ -490,10 +503,9 @@ async def get_property(property_id: int):
         prop = await fetch_property_by_id(property_id)
         if not prop:
             raise HTTPException(status_code=404, detail="Property not found")
-        
-        # Add analysis
-        prop['analysis'] = calculate_property_analysis(prop)
-        return prop
+
+        # Attach analysis and rename fields to match the list endpoint's shape.
+        return to_frontend_property(dict(prop))
     except HTTPException:
         raise
     except Exception as e:

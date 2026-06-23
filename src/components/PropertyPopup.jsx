@@ -1,15 +1,11 @@
 import React from 'react';
-import { formatCurrency, formatCompact, getDealScoreColor, getDealScoreLabel } from '../utils/calculations';
-import useStore from '../store/useStore';
+import { formatCurrency, formatCompact, getDealScoreColor } from '../utils/calculations';
 
 export default function PropertyPopup({ property }) {
-  const { viewport } = useStore();
-  
   if (!property) return null;
 
   const score = property.analysis?.dealScore || 0;
   const scoreColor = getDealScoreColor(score);
-  const scoreLabel = getDealScoreLabel(score);
 
   // Calculate screen position (simplified - works for basic cases)
   // In production, you'd use Mapbox's project() method

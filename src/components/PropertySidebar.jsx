@@ -1,14 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { 
-  X, 
-  Home, 
-  DollarSign, 
-  Calendar, 
-  Ruler, 
-  Bed, 
-  Bath, 
-  Building, 
-  TrendingUp,
+  X,
+  Home,
+  Calendar,
+  Ruler,
+  Bed,
+  Bath,
+  Building,
   Calculator,
   ChevronDown,
   ChevronUp,
@@ -110,8 +108,8 @@ export default function PropertySidebar() {
           <div className="grid grid-cols-2 gap-3">
             <DetailCard icon={<Bed className="w-4 h-4" />} label="Bedrooms" value={property.beds} />
             <DetailCard icon={<Bath className="w-4 h-4" />} label="Bathrooms" value={property.baths} />
-            <DetailCard icon={<Ruler className="w-4 h-4" />} label="Square Feet" value={property.sqft.toLocaleString()} />
-            <DetailCard icon={<Home className="w-4 h-4" />} label="Lot Size" value={`${(property.lotSize / 43560).toFixed(2)} acres`} />
+            <DetailCard icon={<Ruler className="w-4 h-4" />} label="Square Feet" value={(property.sqft ?? 0).toLocaleString()} />
+            <DetailCard icon={<Home className="w-4 h-4" />} label="Lot Size" value={`${((property.lotSize ?? 0) / 43560).toFixed(2)} acres`} />
             <DetailCard icon={<Calendar className="w-4 h-4" />} label="Year Built" value={property.yearBuilt} />
             <DetailCard icon={<Building className="w-4 h-4" />} label="Type" value={property.homeType} />
             <DetailCard icon={<Tag className="w-4 h-4" />} label="$/Sq Ft" value={`$${property.pricePerSqft}`} />

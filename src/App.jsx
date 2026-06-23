@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import MapView from './components/MapView';
 import PropertySidebar from './components/PropertySidebar';
 import ControlPanel from './components/ControlPanel';
-import useStore from './store/useStore';
+import useStore, { filterProperties } from './store/useStore';
 import { Database, Cloud, AlertCircle, Loader2 } from 'lucide-react';
 
 function App() {
@@ -87,8 +87,11 @@ function DataSourceBadge({ dataSource, error }) {
 }
 
 function QuickStats() {
-  const { getFilteredProperties } = useStore();
-  const properties = getFilteredProperties();
+  const { properties: allProperties, filters } = useStore();
+  const properties = useMemo(
+    () => filterProperties(allProperties, filters),
+    [allProperties, filters]
+  );
 
   // Calculate stats
   const avgScore = properties.length > 0
