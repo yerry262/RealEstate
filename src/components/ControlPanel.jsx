@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Layers, 
   Map as MapIcon, 
@@ -10,7 +10,7 @@ import {
   Settings,
   X
 } from 'lucide-react';
-import useStore, { HEATMAP_METRICS, PROPERTY_FILTERS } from '../store/useStore';
+import useStore, { HEATMAP_METRICS, PROPERTY_FILTERS, filterProperties } from '../store/useStore';
 
 export default function ControlPanel() {
   const [expanded, setExpanded] = useState(true);
@@ -28,11 +28,13 @@ export default function ControlPanel() {
     filters,
     setFilter,
     resetFilters,
-    getFilteredProperties,
     properties,
   } = useStore();
 
-  const filteredCount = getFilteredProperties().length;
+  const filteredCount = useMemo(
+    () => filterProperties(properties, filters).length,
+    [properties, filters]
+  );
 
   return (
     <div className="absolute top-4 left-4 z-40">

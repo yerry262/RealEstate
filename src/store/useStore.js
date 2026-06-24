@@ -78,6 +78,24 @@ export const PROPERTY_FILTERS = {
 };
 
 /**
+ * Pure predicate for filtering properties. Kept outside the store so callers can
+ * memoize it (useMemo) instead of producing a brand-new array on every render.
+ * @param {Array} properties
+ * @param {Object} filters
+ * @returns {Array}
+ */
+export function filterProperties(properties, filters) {
+  return properties.filter((p) => {
+    if (filters.status !== 'All' && p.status !== filters.status) return false;
+    if (filters.homeType !== 'All' && p.homeType !== filters.homeType) return false;
+    if (p.price < filters.priceMin || p.price > filters.priceMax) return false;
+    if (filters.bedsMin !== 'Any' && p.beds < filters.bedsMin) return false;
+    if (filters.dealScoreMin !== 'Any' && (p.analysis?.dealScore || 0) < filters.dealScoreMin) return false;
+    return true;
+  });
+}
+
+/**
  * Main application store
  */
 const useStore = create((set, get) => ({
@@ -176,18 +194,10 @@ const useStore = create((set, get) => ({
     },
   }),
   
-  // Get filtered properties
+  // Get filtered properties (non-memoized convenience accessor)
   getFilteredProperties: () => {
     const { properties, filters } = get();
-    
-    return properties.filter((p) => {
-      if (filters.status !== 'All' && p.status !== filters.status) return false;
-      if (filters.homeType !== 'All' && p.homeType !== filters.homeType) return false;
-      if (p.price < filters.priceMin || p.price > filters.priceMax) return false;
-      if (filters.bedsMin !== 'Any' && p.beds < filters.bedsMin) return false;
-      if (filters.dealScoreMin !== 'Any' && (p.analysis?.dealScore || 0) < filters.dealScoreMin) return false;
-      return true;
-    });
+    return filterProperties(properties, filters);
   },
   
   // ============ HEATMAP ============

@@ -3,7 +3,7 @@ import Map, { NavigationControl, ScaleControl } from 'react-map-gl';
 import { DeckGL } from '@deck.gl/react';
 import { ScatterplotLayer } from '@deck.gl/layers';
 import { HeatmapLayer } from '@deck.gl/aggregation-layers';
-import useStore, { HEATMAP_METRICS } from '../store/useStore';
+import useStore, { HEATMAP_METRICS, filterProperties } from '../store/useStore';
 import { getDealScoreColor } from '../utils/calculations';
 import PropertyPopup from './PropertyPopup';
 
@@ -30,10 +30,16 @@ export default function MapView() {
     setSelectedProperty,
     hoveredProperty,
     setHoveredProperty,
-    getFilteredProperties,
+    properties: allProperties,
+    filters,
   } = useStore();
 
-  const properties = getFilteredProperties();
+  // Memoize so the deck.gl layers below only rebuild when data/filters change,
+  // not on every unrelated re-render.
+  const properties = useMemo(
+    () => filterProperties(allProperties, filters),
+    [allProperties, filters]
+  );
   const metricConfig = HEATMAP_METRICS[activeHeatmapMetric];
 
   // Create the scatter plot layer for property pins
@@ -96,7 +102,7 @@ export default function MapView() {
       opacity: heatmapOpacity,
       colorRange: metricConfig.colorRange,
     });
-  }, [properties, heatmapEnabled, activeHeatmapMetric, heatmapOpacity, metricConfig]);
+  }, [properties, heatmapEnabled, heatmapOpacity, metricConfig]);
 
   // Combine layers
   const layers = useMemo(() => {
