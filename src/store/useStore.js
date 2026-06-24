@@ -113,7 +113,7 @@ const useStore = create((set, get) => ({
   setMapStyle: (style) => set({ mapStyle: style }),
   
   // ============ DATA SOURCE ============
-  dataSource: 'loading', // 'api' | 'mock' | 'loading'
+  dataSource: 'loading', // 'api' | 'error' | 'loading'
   setDataSource: (source) => set({ dataSource: source }),
   
   // ============ PROPERTIES ============
