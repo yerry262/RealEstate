@@ -60,33 +60,6 @@ export async function fetchPropertyById(id) {
 }
 
 /**
- * Analyze a property with custom assumptions
- * @param {Object} property - Property data
- * @param {Object} assumptions - Calculator assumptions
- * @returns {Promise<Object>} Analysis results
- */
-export async function analyzeProperty(property, assumptions) {
-  try {
-    const response = await fetch(`${API_BASE}/api/analyze`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ property, assumptions }),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Error analyzing property:', error);
-    throw error;
-  }
-}
-
-/**
  * Create a new property
  * @param {Object} propertyData - Property data
  * @returns {Promise<Object>} Created property with ID
