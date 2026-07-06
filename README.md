@@ -2,6 +2,8 @@
 
 An interactive React application for visualizing and analyzing real estate investment opportunities. Features satellite maps with heatmap overlays showing deal quality metrics, and a powerful property calculator for instant investment analysis.
 
+**🌐 Live Demo: [https://yerry262.github.io/RealEstate/](https://yerry262.github.io/RealEstate/)**
+
 ![Deal Finder Screenshot](docs/screenshot.png)
 
 ## Features
